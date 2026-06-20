@@ -57,30 +57,24 @@
         font-weight: normal;
     }
 
-    .intro-card {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 10px;
-        padding: 10px 14px;
-        margin-bottom: 14px;
-        text-align: center;
+    .read-cta {
         display: none; /* shown by JS once the passage is known */
-    }
-
-    .intro-card p {
-        font-size: 12px;
-        line-height: 1.5;
-        color: #b8d4e8;
-        margin-bottom: 8px;
-    }
-
-    .intro-card a {
-        display: inline-block;
+        width: 100%;
+        padding: 13px;
+        margin-bottom: 10px;
+        background: rgba(249, 217, 118, 0.12);
         color: #f9d976;
-        font-size: 13px;
+        border: 2px solid rgba(249, 217, 118, 0.6);
+        border-radius: 11px;
+        font-family: Georgia, serif;
+        font-size: 14px;
         font-weight: bold;
+        letter-spacing: 0.5px;
+        text-align: center;
+        cursor: pointer;
         text-decoration: none;
-        border-bottom: 1px solid rgba(249, 217, 118, 0.5);
+        box-sizing: border-box;
+        -webkit-appearance: none;
     }
 
     .layout {
@@ -293,11 +287,6 @@
         <span class="how-to">· How to Play</span>
     </div>
 
-    <div class="intro-card" id="intro-card">
-        <p>This week's word puzzle is built around the Bible passage for Sunday's message. Read it first, then come play — you'll spot the words faster.</p>
-        <a id="passage-link" href="#" target="_blank" rel="noopener">Read <span id="passage-ref-text">this week's passage</span> →</a>
-    </div>
-
     <div class="layout">
 
         <!-- LEFT col -->
@@ -443,6 +432,8 @@
         </div>
     </div>
 
+    <a id="passage-link" href="#" target="_blank" rel="noopener" class="read-cta">Read this week's passage now</a>
+
     <a href="play.html" class="cta">Let's Play →</a>
 
     <p class="footer">PIVOT · RICF EDITION</p>
@@ -494,15 +485,13 @@
             if (!passageRef) throw new Error('No passage reference in latest row');
 
             const link = document.getElementById('passage-link');
-            const refText = document.getElementById('passage-ref-text');
-            const card = document.getElementById('intro-card');
-            refText.textContent = passageRef;
+            link.textContent = 'Read ' + passageRef + ' Now';
             link.href = 'https://www.biblegateway.com/passage/?search=' +
                 encodeURIComponent(passageRef) + '&version=NIV';
-            card.style.display = 'block';
+            link.style.display = 'block';
         } catch (e) {
             console.warn('Passage link unavailable:', e.message);
-            // Card stays hidden — "Let's Play" still works either way.
+            // Button stays hidden — "Let's Play" still works either way.
         }
     })();
     </script>

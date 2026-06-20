@@ -63,6 +63,26 @@
         margin: 0;
     }/* Floating bar */
 
+    .read-cta {
+        display: none; /* shown by JS once the passage is known */
+        width: 100%;
+        padding: 11px;
+        margin-bottom: 12px;
+        background: rgba(249, 217, 118, 0.12);
+        color: #f9d976;
+        border: 2px solid rgba(249, 217, 118, 0.6);
+        border-radius: 11px;
+        font-family: Georgia, serif;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        text-align: center;
+        cursor: pointer;
+        text-decoration: none;
+        box-sizing: border-box;
+        -webkit-appearance: none;
+    }
+
     .card {
         background: rgba(255, 255, 255, 0.07);
         border-radius: 13px;
@@ -709,6 +729,9 @@
         <p class="eyebrow">RICF EDITION <span style="opacity:0.5;font-size:8px;letter-spacing:1px;">v1.27</span></p>
         <h1>PIVOT<span style="color:#a8c8e8;font-size:16px;letter-spacing:2px;font-weight:normal;"> : </span><span id="theme-label" style="color:#fff;font-size:20px;letter-spacing:4px;">…</span></h1>
     </div>
+
+    <a id="passage-link" href="#" target="_blank" rel="noopener" class="read-cta">Read this week's passage now</a>
+
     <div id="loading-msg" style="text-align:center;padding:40px 20px;color:#a8c8e8;font-family:Georgia,serif;font-size:16px;letter-spacing:1px;">
         Loading puzzle…
     </div>
@@ -2260,6 +2283,15 @@
         if (!ok) {
             showUnavailable();
             return;
+        }
+
+        const passageRef = P.passageRef || P.theme;
+        if (passageRef) {
+            const link = document.getElementById('passage-link');
+            link.textContent = 'Read ' + passageRef + ' Now';
+            link.href = 'https://www.biblegateway.com/passage/?search=' +
+                encodeURIComponent(passageRef) + '&version=NIV';
+            link.style.display = 'block';
         }
 
         // WORDBANK additions that depend on the loaded puzzle (target word,
