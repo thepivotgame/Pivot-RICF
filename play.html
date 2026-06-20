@@ -68,9 +68,9 @@
         width: 100%;
         padding: 11px;
         margin-bottom: 12px;
-        background: rgba(249, 217, 118, 0.12);
-        color: #f9d976;
-        border: 2px solid rgba(249, 217, 118, 0.6);
+        background: #f9d976;
+        color: #0d3349;
+        border: none;
         border-radius: 11px;
         font-family: Georgia, serif;
         font-size: 13px;
@@ -674,6 +674,30 @@
         word-break: break-word;
     }
 
+    #daily-promo {
+        background: rgba(249, 217, 118, 0.1);
+        border: 1px solid rgba(249, 217, 118, 0.3);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        text-align: center;
+    }
+
+    #daily-promo p {
+        font-size: 12px;
+        color: #f0ede6;
+        line-height: 1.5;
+        margin-bottom: 6px;
+    }
+
+    #daily-promo a {
+        color: #f9d976;
+        font-size: 13px;
+        font-weight: bold;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(249, 217, 118, 0.5);
+    }
+
     .share-btn {
         display: block;
         width: 100%;
@@ -809,6 +833,10 @@
         <div id="sharebox">
             <h3>Share your result?</h3>
             <div id="shareresult"></div>
+            <div id="daily-promo">
+                <p>Did you enjoy this? There's a <strong style="color:#f9d976;">daily</strong> word puzzle too — a fresh one every day.</p>
+                <a href="https://tinyurl.com/pivot-en" target="_blank" rel="noopener">Play the daily version →</a>
+            </div>
             <button class="share-btn share-wa" id="sharebtn-wa">📱 WhatsApp</button>
             <button class="share-btn share-em" id="sharebtn-em">✉️ Email</button>
             <button class="share-btn share-cp" id="sharebtn-cp">📋 Copy to clipboard</button>
@@ -900,6 +928,28 @@
         };
     }
 
+    // Finds the row that should be live right now: the one with the latest
+    // weekOf date that is on or before today. Rows dated in the future are
+    // ignored entirely, so you can pre-load several weeks' worth of puzzles
+    // at once and each will only go live on its own week — never early.
+    // Returns null if no row qualifies (every row is future-dated, or none
+    // have a parseable weekOf).
+    function pickCurrentRow(rows) {
+        const todayMs = new Date(todayISO() + 'T00:00:00').getTime();
+        let best = null, bestTime = -Infinity;
+        for (const r of rows) {
+            const wk = r[0];
+            if (!wk) continue;
+            const t = new Date(wk + 'T00:00:00').getTime();
+            if (isNaN(t)) continue;
+            if (t <= todayMs && t > bestTime) {
+                best = r;
+                bestTime = t;
+            }
+        }
+        return best;
+    }
+
     async function loadPuzzleData() {
         try {
             const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
@@ -907,9 +957,24 @@
             const text = await res.text();
             const rows = parseCSV(text).slice(1); // drop header row
             if (!rows.length) throw new Error('Sheet has no data rows');
-            const last = rows[rows.length - 1];
-            const puzzle = rowToPuzzle(last);
-            if (!puzzle.pivot || !puzzle.target) throw new Error('Latest row is incomplete');
+
+            const current = pickCurrentRow(rows);
+            if (!current) throw new Error('No row is dated today or earlier');
+            const puzzle = rowToPuzzle(current);
+            if (!puzzle.pivot || !puzzle.target) throw new Error('Current row is incomplete');
+
+            // A puzzle is only "current" for the 7 days starting on its
+            // weekOf date. If a full week has passed with no newer row
+            // added, treat it as stale rather than silently keep serving
+            // last week's puzzle as if it were this week's.
+            if (puzzle.weekOf) {
+                const published = new Date(puzzle.weekOf + 'T00:00:00');
+                const ageDays = (Date.now() - published.getTime()) / 86400000;
+                if (ageDays >= 7) {
+                    throw new Error('Current row is stale (' + Math.floor(ageDays) + ' days old)');
+                }
+            }
+
             P = puzzle;
             return true;
         } catch (e) {

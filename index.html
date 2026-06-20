@@ -4,21 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>How to Play — PIVOT</title>
-    <script>
-    // If they've already played today's puzzle, skip the instructions
-    // entirely and go straight back to play.html, which will show their
-    // saved result instead of a fresh puzzle.
-    (function () {
-        try {
-    var saved = JSON.parse(localStorage.getItem('pivot_result_ricf') || 'null');
-    if (saved) {
-        window.location.replace('play.html');
-    }
-        } catch (e) {
-            // localStorage unavailable or bad data — just show the intro as normal.
-        }
-    })();
-    </script>
     <style>
     * {
         box-sizing: border-box;
@@ -62,9 +47,9 @@
         width: 100%;
         padding: 13px;
         margin-bottom: 10px;
-        background: rgba(249, 217, 118, 0.12);
-        color: #f9d976;
-        border: 2px solid rgba(249, 217, 118, 0.6);
+        background: #f9d976;
+        color: #0d3349;
+        border: none;
         border-radius: 11px;
         font-family: Georgia, serif;
         font-size: 14px;
@@ -470,6 +455,34 @@
         return rows.filter(r => r.length > 1 || r[0] !== '');
     }
 
+    function todayISO() {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+
+    // Same selection rule as play.html: pick the row with the latest weekOf
+    // that is on or before today, ignoring any future-dated rows. Keeps the
+    // "read it first" link in sync with whichever puzzle is actually live,
+    // even if several future weeks are already sitting in the sheet.
+    function pickCurrentRow(rows) {
+        const todayMs = new Date(todayISO() + 'T00:00:00').getTime();
+        let best = null, bestTime = -Infinity;
+        for (const r of rows) {
+            const wk = r[0];
+            if (!wk) continue;
+            const t = new Date(wk + 'T00:00:00').getTime();
+            if (isNaN(t)) continue;
+            if (t <= todayMs && t > bestTime) {
+                best = r;
+                bestTime = t;
+            }
+        }
+        return best;
+    }
+
     (async function showPassageLink() {
         try {
             const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
@@ -477,12 +490,23 @@
             const text = await res.text();
             const rows = parseCSV(text).slice(1); // drop header row
             if (!rows.length) throw new Error('Sheet has no data rows');
-            const last = rows[rows.length - 1];
+
+            const current = pickCurrentRow(rows);
+            if (!current) throw new Error('No row is dated today or earlier');
             // Column order: weekOf, theme, word1-7, pivot, target, noise,
             // latHint, pivHint, winText, lossText, passageRef
-            const theme = last[1];
-            const passageRef = last[16] || theme;
-            if (!passageRef) throw new Error('No passage reference in latest row');
+            const weekOf = current[0];
+            const theme = current[1];
+            const passageRef = current[16] || theme;
+            if (!passageRef) throw new Error('No passage reference in current row');
+
+            // Same staleness rule as play.html: don't promote a passage
+            // whose puzzle week is more than 7 days old.
+            if (weekOf) {
+                const published = new Date(weekOf + 'T00:00:00');
+                const ageDays = (Date.now() - published.getTime()) / 86400000;
+                if (ageDays >= 7) throw new Error('Current row is stale');
+            }
 
             const link = document.getElementById('passage-link');
             link.textContent = 'Read ' + passageRef + ' Now';
